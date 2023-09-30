@@ -1,10 +1,12 @@
-const TASK_LIST = [
+const { Priority } = require("./constants/task")
+
+let TASK_LIST = [
     {
         id:1,
         title:"Go to gym 🏋️",
         description:"Go to gym in morning at 7:AM",
         isCompleted:true,
-        priority:"medium",
+        priority:Priority.medium,
         completionDate:"20 Aug 2023"
     },
     {
@@ -12,14 +14,14 @@ const TASK_LIST = [
         title:"Submit airtribe assignment 💻",
         description:"Submit assignme by 30 sep",
         isCompleted:false,
-        priority:"high"
+        priority:Priority.high
     },
     {
         id:3,
         title:"Go to office 🏢",
         description:"Go to office by 9:30 AM",
         isCompleted:true,
-        priority:"low",
+        priority:Priority.low,
         completionDate:"21 Aug 2023"
     }
 ]

@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const TASK_LIST = require('./taskList');
 const validateBody = require('./helpers/dataValidator');
+const { CompletionDate, Priority } = require('./constants/task');
 const routes = require('express').Router();
 
 const app = express();
@@ -17,18 +18,49 @@ routes.get('/', (req, res)=>{
   res.status(200).send("Task manager api");
 });
 
+
+
 //Retrieve all tasks
 routes.get('/tasks',(req,res)=>{
     const queryParams = req.query;
     if(Object.keys(queryParams)?.length){
-        if(queryParams?.isComplete === 'true'){
-            const completedData = TASK_LIST.find((obj)=>obj.isCompleted);
-            if(completedData){
-                return res.status(200).send(completedData);
+        const {isComplete , completionDate} = queryParams;
+        let resultData = [];
+
+            //Handling for isComplete
+            if(!isComplete){
+                resultData = TASK_LIST;
+            }
+            else if(isComplete === 'true'){
+                resultData = TASK_LIST.filter((obj)=>obj.isCompleted);
+            }
+            else if(isComplete == 'false'){
+                resultData = TASK_LIST.filter((obj)=>!obj.isCompleted);
+            }
+            else if(isComplete !== 'true' && isComplete !== 'false'){
+                //Handles the case when isComplete is not passed in query params
+                return res.status(400).send("Bad request");
+            }
+
+            if(!resultData?.length){
+                return res.status(404).send("Not found");
+            }
+
+            //Completion date sorting handling by latest and oldest
+            if(completionDate === CompletionDate.latest){
+                // if completion date is null then today's date is assigned as completionDate
+                resultData = resultData.sort((a,b)=> new Date(b?.completionDate ?? new Date()) - new Date(a?.completionDate ?? new Date()));
+            }
+            else if(completionDate === CompletionDate.oldest){
+                resultData = resultData.sort((a,b)=> new Date(a?.completionDate ?? new Date()) - new Date(b?.completionDate ?? new Date()));
+            }
+            else if(completionDate && (completionDate !== CompletionDate.latest || completionDate !== CompletionDate.oldest)){
+                return res.status(400).send("Bad request");
+            }
+            if(resultData?.length){
+                return res.status(200).send(resultData);
             }
             else return res.status(404).send("No data found");
-        }
-        console.log(queryParams);
     }
     else {
         res.status(200).send(TASK_LIST)
@@ -37,7 +69,7 @@ routes.get('/tasks',(req,res)=>{
 
 //Retrieve a single task by its ID.
 routes.get('/tasks/:id',(req,res)=>{
-    const taskId = req.params.id;
+    const taskId = parseInt(req.params.id);
     const requiredItem = TASK_LIST.find((obj)=>obj.id === taskId);
     if(requiredItem){
         return res.status(200).send(requiredItem);
@@ -45,30 +77,73 @@ routes.get('/tasks/:id',(req,res)=>{
     else return res.status(404).send("Task for the following id was not found");
 })
 
+
 //Create a new task
 routes.post('/tasks',(req,res)=>{
     const body = req.body;
+    const searchedId = TASK_LIST?.find((val)=>body?.id === val?.id);
     const {isValid,err} = validateBody(body);
-    if(isValid){
+    if(isValid && !searchedId){
         TASK_LIST.push(body);
-        res.status(200).send("New task created successfully");
+        return res.status(200).send({msg:"Task created successfully",data:TASK_LIST});
     }
     else {
-        res.status(400).send(err);
+        return res.status(400).send(err);
     }
 })
 
 //Update an existing task by its ID.
-routes.put('/tasks/:id',(req,res)=>(
-    res.status(200).send()
-))
+routes.put('/tasks/:id',(req,res)=>{
+    const id = parseInt(req.params.id);
+    const body = req.body;
+    let updateEle = TASK_LIST.find((obj)=>obj.id === id);
+    if(Object.keys(body).length && updateEle){
+        const filteredValue = TASK_LIST.filter((obj)=>obj.id !== id);
+        if(body.hasOwnProperty('priority')){
+            updateEle.priority = body.priority;
+        }
+        else if(body.hasOwnProperty('completionDate')){
+            updateEle.priority = body.completionDate;
+        }
+        else if(body.hasOwnProperty('description')){
+            updateEle.description = body.description;
+        }
+        else if(body.hasOwnProperty('title')){
+            updateEle.title = body.title;
+        }
+        else if(body.hasOwnProperty('isCompleted')){
+            updateEle.isCompleted = body.isCompleted;
+        }
+        TASK_LIST = [...filteredValue,updateEle];
+        return res.status(200).send({msg:"Task pushed successfully",data:TASK_LIST});
+    }
+    else return res.status(400).send("Bad request");
+})
 
 //Delete a task by its ID.
-routes.delete('/tasks/:id',(req,res)=>(
-    res.status(200).send()
-))
+routes.delete('/tasks/:id',(req,res)=>
+    {
+        const id = parseInt(req.params.id);
+        const updateEle = TASK_LIST.find((obj)=>obj.id === id);
+        if(updateEle){
+            const filteredValue = TASK_LIST.filter((obj)=>obj.id !== id);
+            TASK_LIST = filteredValue;
+            return res.status(200).send({msg:"Task pushed successfully",data:TASK_LIST});
+        }
+        else return res.status(400).send("Bad request");
+    }
+)
 
-// routes.use('/courses', courseInfo);
+//retrieve tasks based on priority level
+routes.get('/tasks/priority/:level',(req,res)=>{
+    const priorityLevel = req.params.level;
+    let result = [];
+    if(priorityLevel === Priority.high || priorityLevel === Priority.medium || priorityLevel === Priority.low){
+        result = TASK_LIST.filter((obj)=>obj.priority === priorityLevel);
+        return res.status(200).send(result);
+    }
+    else return res.status(400).send("Bad request");
+})
 
 app.listen(PORT, (error) =>{
     if(!error)
