@@ -96,25 +96,24 @@ routes.post('/tasks',(req,res)=>{
 routes.put('/tasks/:id',(req,res)=>{
     const id = parseInt(req.params.id);
     const body = req.body;
-    let updateEle = TASK_LIST.find((obj)=>obj.id === id);
-    if(Object.keys(body).length && updateEle){
+    let updateIdx = TASK_LIST.findIndex((obj)=>obj.id === id);
+    if(Object.keys(body).length && updateIdx !== -1){
         const filteredValue = TASK_LIST.filter((obj)=>obj.id !== id);
         if(body.hasOwnProperty('priority')){
-            updateEle.priority = body.priority;
+            TASK_LIST[updateIdx].priority = body.priority;
         }
         else if(body.hasOwnProperty('completionDate')){
-            updateEle.priority = body.completionDate;
+            TASK_LIST[updateIdx].priority = body.completionDate;
         }
         else if(body.hasOwnProperty('description')){
-            updateEle.description = body.description;
+            TASK_LIST[updateIdx].description = body.description;
         }
         else if(body.hasOwnProperty('title')){
-            updateEle.title = body.title;
+            TASK_LIST[updateIdx].title = body.title;
         }
         else if(body.hasOwnProperty('isCompleted')){
-            updateEle.isCompleted = body.isCompleted;
+            TASK_LIST[updateIdx].isCompleted = body.isCompleted;
         }
-        TASK_LIST = [...filteredValue,updateEle];
         return res.status(200).send({msg:"Task pushed successfully",data:TASK_LIST});
     }
     else return res.status(400).send("Bad request");
@@ -124,10 +123,9 @@ routes.put('/tasks/:id',(req,res)=>{
 routes.delete('/tasks/:id',(req,res)=>
     {
         const id = parseInt(req.params.id);
-        const updateEle = TASK_LIST.find((obj)=>obj.id === id);
-        if(updateEle){
-            const filteredValue = TASK_LIST.filter((obj)=>obj.id !== id);
-            TASK_LIST = filteredValue;
+        const taskEle = TASK_LIST.findIndex((obj)=>obj.id === id);
+        if(taskEle !== -1){
+            TASK_LIST.splice(taskEle,1);
             return res.status(200).send({msg:"Task pushed successfully",data:TASK_LIST});
         }
         else return res.status(400).send("Bad request");
